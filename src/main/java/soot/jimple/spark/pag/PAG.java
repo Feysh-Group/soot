@@ -84,10 +84,11 @@ import soot.tagkit.LinkTag;
 import soot.tagkit.StringTag;
 import soot.tagkit.Tag;
 import soot.toolkits.scalar.Pair;
-import soot.util.ArrayNumberer;
 import soot.util.HashMultiMap;
+import soot.util.IterableNumberer;
 import soot.util.LargeNumberedMap;
 import soot.util.MultiMap;
+import soot.util.PagNodeArrayNumberer;
 import soot.util.queue.ChunkedQueue;
 import soot.util.queue.QueueReader;
 
@@ -983,10 +984,6 @@ public class PAG implements PointsToAnalysis {
     return edgeQueue.reader();
   }
 
-  public int getNumAllocNodes() {
-    return allocNodeNumberer.size();
-  }
-
   public TypeManager getTypeManager() {
     return typeManager;
   }
@@ -1019,28 +1016,36 @@ public class PAG implements PointsToAnalysis {
     return nodeToTag;
   }
 
-  protected final ArrayNumberer<AllocNode> allocNodeNumberer = new ArrayNumberer<AllocNode>();
+  protected final PagNodeArrayNumberer<Node> nodeNumberer = new PagNodeArrayNumberer<>();
+  private final IterableNumberer<AllocDotField> allocDotFieldNodeNumberer = nodeNumberer.getInnerNumberer();
+  private final IterableNumberer<VarNode> varNodeNumberer = nodeNumberer.getInnerNumberer();
+  private final IterableNumberer<FieldRefNode> fieldRefNodeNumberer = nodeNumberer.getInnerNumberer();
+  protected final IterableNumberer<NewInstanceNode> newInstanceNodeNumberer = nodeNumberer.getInnerNumberer();
 
-  public ArrayNumberer<AllocNode> getAllocNodeNumberer() {
-    return allocNodeNumberer;
+  protected final IterableNumberer<AllocNode> allocNodeNumberer = nodeNumberer.getInnerNumberer();
+
+  public IterableNumberer<AllocDotField> getAllocDotFieldNodeNumberer() {
+    return allocDotFieldNodeNumberer;
   }
 
-  private final ArrayNumberer<VarNode> varNodeNumberer = new ArrayNumberer<VarNode>();
-
-  public ArrayNumberer<VarNode> getVarNodeNumberer() {
+  public IterableNumberer<VarNode> getVarNodeNumberer() {
     return varNodeNumberer;
   }
 
-  private final ArrayNumberer<FieldRefNode> fieldRefNodeNumberer = new ArrayNumberer<FieldRefNode>();
-
-  public ArrayNumberer<FieldRefNode> getFieldRefNodeNumberer() {
+  public IterableNumberer<FieldRefNode> getFieldRefNodeNumberer() {
     return fieldRefNodeNumberer;
   }
 
-  private final ArrayNumberer<AllocDotField> allocDotFieldNodeNumberer = new ArrayNumberer<AllocDotField>();
+  public IterableNumberer<NewInstanceNode> getNewInstanceNodeNumberer() {
+    return newInstanceNodeNumberer;
+  }
 
-  public ArrayNumberer<AllocDotField> getAllocDotFieldNodeNumberer() {
-    return allocDotFieldNodeNumberer;
+  public IterableNumberer<AllocNode> getAllocNodeNumberer() {
+    return allocNodeNumberer;
+  }
+
+  public IterableNumberer<Node> nodeNumberer() {
+    return nodeNumberer;
   }
 
   /** Returns SparkOptions for this graph. */

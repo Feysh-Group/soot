@@ -191,13 +191,16 @@ public class OnFlyCallGraph {
           if (n instanceof AllocNode) {
             AllocNode an = ((AllocNode) n);
             ofcgb.addInvokeArgDotField(receiver, pag.makeAllocDotField(an, ArrayElement.v()));
-            assert an.getNewExpr() instanceof NewArrayExpr;
-            NewArrayExpr nae = (NewArrayExpr) an.getNewExpr();
-            if (!(nae.getSize() instanceof IntConstant)) {
-              ofcgb.setArgArrayNonDetSize(receiver, context);
-            } else {
-              IntConstant sizeConstant = (IntConstant) nae.getSize();
-              ofcgb.addPossibleArgArraySize(receiver, sizeConstant.value, context);
+            Object expr = an.getNewExpr();
+//            assert expr instanceof NewArrayExpr;
+            if (expr instanceof NewArrayExpr) {
+              NewArrayExpr nae = (NewArrayExpr) an.getNewExpr();
+              if (!(nae.getSize() instanceof IntConstant)) {
+                ofcgb.setArgArrayNonDetSize(receiver, context);
+              } else {
+                IntConstant sizeConstant = (IntConstant) nae.getSize();
+                ofcgb.addPossibleArgArraySize(receiver, sizeConstant.value, context);
+              }
             }
           }
         }

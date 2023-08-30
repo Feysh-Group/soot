@@ -279,6 +279,8 @@ public class SootResolver {
           classToTypesHierarchy.putAll(sc, dependencies.typesToHierarchy);
         }
       }
+    } catch (Exception e) {
+      logger.warn(e.getMessage());
     } finally {
       if (is != null) {
         is.close();

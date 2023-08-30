@@ -45,8 +45,8 @@ import soot.jimple.spark.pag.AllocNode;
 import soot.jimple.spark.pag.Node;
 import soot.jimple.spark.pag.PAG;
 import soot.jimple.toolkits.typing.fast.WeakObjectType;
-import soot.util.ArrayNumberer;
 import soot.util.BitVector;
+import soot.util.IterableNumberer;
 import soot.util.LargeNumberedMap;
 import soot.util.queue.QueueReader;
 
@@ -181,7 +181,7 @@ public final class TypeManager {
       }
     }
     // **
-    ArrayNumberer<AllocNode> allocNodes = pag.getAllocNodeNumberer();
+    IterableNumberer<AllocNode> allocNodes = pag.getAllocNodeNumberer();
     for (Type t : Scene.v().getTypeNumberer()) {
       if (!(t instanceof RefLikeType) || (t instanceof AnySubType) || isUnresolved(t)) {
         continue;

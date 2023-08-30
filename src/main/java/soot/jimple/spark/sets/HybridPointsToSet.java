@@ -118,7 +118,7 @@ public class HybridPointsToSet extends PointsToSetInternal {
       }
     } else {
       for (BitSetIterator it = bits.iterator(); it.hasNext();) {
-        v.visit(pag.getAllocNodeNumberer().get(it.next()));
+        v.visit(pag.nodeNumberer().get(it.next()));
       }
     }
     return v.getReturnValue();

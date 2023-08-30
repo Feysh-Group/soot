@@ -1948,7 +1948,7 @@ public class Scene {
    * Load the set of classes that soot needs, including those specified on the command-line. This is the standard way of
    * initialising the list of classes soot should use.
    */
-  public void loadNecessaryClasses() {
+  public void loadNecessaryClasses(boolean loadBody) {
     loadBasicClasses();
 
     final Options opts = Options.v();
@@ -1965,7 +1965,12 @@ public class Scene {
     } else {
       for (String path : opts.process_dir()) {
         for (String cl : SourceLocator.v().getClassesUnder(path)) {
-          SootClass theClass = loadClassAndSupport(cl);
+          SootClass theClass;
+          if (loadBody) {
+            theClass = loadClassAndSupport(cl);
+          } else {
+            theClass = loadClass(cl, SootClass.SIGNATURES);
+          }
           if (!theClass.isPhantom) {
             theClass.setApplicationClass();
           }
@@ -1975,6 +1980,10 @@ public class Scene {
 
     prepareClasses();
     setDoneResolving();
+  }
+
+  public void loadNecessaryClasses() {
+    loadNecessaryClasses(true);
   }
 
   public void loadDynamicClasses() {

@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import soot.dava.DavaBody;
 import soot.dava.toolkits.base.renamer.RemoveFullyQualifiedName;
 import soot.dotnet.members.DotnetMethod;
+import soot.jimple.Jimple;
 import soot.options.Options;
 import soot.tagkit.AbstractHost;
 import soot.util.IterableSet;
@@ -444,7 +445,13 @@ public class SootMethod extends AbstractHost implements ClassMember, Numberable,
       }
 
       // Method sources are not expected to be thread safe
-      activeBody = ms.getBody(this, "jb");
+      try {
+        activeBody = ms.getBody(this, "jb");
+      } catch (Exception e) {
+        logger.warn("failed to get method body of " + this + " e: " + e.getMessage());
+        final Jimple jimp = Jimple.v();
+        activeBody = jimp.newBody(this);
+      }
       setActiveBody(activeBody);
 
       // If configured, we drop the method source to save memory

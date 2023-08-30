@@ -474,7 +474,7 @@ public class ModuleScene extends Scene {
    * initialising the list of classes soot should use.
    */
   @Override
-  public void loadNecessaryClasses() {
+  public void loadNecessaryClasses(boolean loadBody) {
     loadBasicClasses();
 
     final Options opts = Options.v();
@@ -492,8 +492,17 @@ public class ModuleScene extends Scene {
       for (String path : opts.process_dir()) {
         for (Map.Entry<String, List<String>> entry : ModulePathSourceLocator.v().getClassUnderModulePath(path).entrySet()) {
           for (String cl : entry.getValue()) {
-            SootClass theClass = loadClassAndSupport(cl, Optional.fromNullable(entry.getKey()));
-            theClass.setApplicationClass();
+
+            SootClass theClass;
+            Optional<String> moduleName = Optional.fromNullable(entry.getKey());
+            if (loadBody) {
+              theClass = loadClassAndSupport(cl, moduleName);
+            } else {
+              theClass = loadClass(cl, SootClass.SIGNATURES, moduleName);
+            }
+            if (!theClass.isPhantom) {
+              theClass.setApplicationClass();
+            }
           }
         }
       }

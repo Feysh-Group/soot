@@ -32,8 +32,11 @@ import com.google.common.cache.RemovalNotification;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PushbackReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -54,15 +57,27 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.jf.dexlib2.iface.DexFile;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import soot.JavaClassProvider.JarException;
 import soot.asm.AsmClassProvider;
 import soot.asm.AsmJava9ClassProvider;
+import soot.asm.AsmUtil;
 import soot.dexpler.DexFileProvider;
 import soot.dotnet.AssemblyFile;
 import soot.dotnet.DotnetClassProvider;
+import soot.jimple.parser.analysis.DepthFirstAdapter;
+import soot.jimple.parser.lexer.Lexer;
+import soot.jimple.parser.lexer.LexerException;
+import soot.jimple.parser.node.AFile;
+import soot.jimple.parser.node.AFullIdentClassName;
+import soot.jimple.parser.node.Start;
+import soot.jimple.parser.parser.Parser;
+import soot.jimple.parser.parser.ParserException;
 import soot.options.Options;
 import soot.util.SharedCloseable;
 
@@ -116,6 +131,7 @@ public class SourceLocator {
               if (f.isFile()) {
                 switch (path.substring(path.length() - 4)) {
                   case ".zip":
+                  case ".war":
                     return ClassSourceType.zip;
                   case ".jar":
                     return ClassSourceType.jar;
@@ -353,6 +369,105 @@ public class SourceLocator {
     }
   }
 
+  public String getNameOfClassUnsafe(InputStream inputStream) {
+    final String[] qClassName = {null};
+    try {
+      ClassReader clsr = new ClassReader(inputStream);
+      ClassVisitor scb = new ClassVisitor(Opcodes.ASM9) {
+        @Override
+        public void visit(int version, int access, String name,
+                          String signature, String superName, String[] interfaces) {
+          super.visit(version, access, name, signature, superName, interfaces);
+          qClassName[0] = AsmUtil.toQualifiedName(name);
+        }
+      };
+      clsr.accept(scb, ClassReader.SKIP_FRAMES);
+    } catch (Exception ioException) {
+      logger.debug("IOException occurred: " + ioException.getMessage());
+    }
+    return qClassName[0];
+  }
+
+
+  public String getNameOfJimpleUnsafe(InputStream inFile) {
+    Parser p = new Parser(new Lexer(new PushbackReader(new InputStreamReader(inFile), 1024)));
+
+    try {
+      Start tree = p.parse();
+      final String[] qClassName = {null};
+      DepthFirstAdapter w = new DepthFirstAdapter() {
+
+        @Override
+        public void caseStart(Start node) {
+          node.getPFile().apply(this);
+        }
+        @Override
+        public void caseAFile(AFile node) {
+          if (node.getClassName() != null) {
+            node.getClassName().apply(this);
+          }
+        }
+        @Override
+        public void caseAFullIdentClassName(AFullIdentClassName node) {
+          qClassName[0] = node.getFullIdentifier().getText();
+        }
+      };
+      tree.apply(w);
+      return qClassName[0];
+    } catch (ParserException e) {
+      logger.debug("Parser exception occurred: " + e.getMessage());
+    } catch (LexerException e) {
+      logger.debug("Lexer exception occurred: " + e.getMessage());
+    } catch (IOException e) {
+      logger.debug("IOException occurred: " + e.getMessage());
+    } catch (Exception e) {
+      logger.debug("" + e.getMessage());
+    }
+    return null;
+  }
+
+
+  public String getNameOfClassUnsafe(File clzPath) {
+    try (FileInputStream inputStream = new FileInputStream(clzPath)) {
+      return getNameOfClassUnsafe(inputStream);
+    } catch (IOException ioException) {
+      logger.debug("IOException occurred: " + ioException.getMessage());
+    }
+    return null;
+  }
+
+
+  public String getNameOfClassUnsafe(ZipFile zipFile, ZipEntry entry) {
+    try (InputStream inputStream = zipFile.getInputStream(entry)) {
+      return getNameOfClassUnsafe(inputStream);
+    } catch (IOException ioException) {
+      logger.debug("IOException occurred: " + ioException.getMessage());
+    }
+    return null;
+  }
+
+  public String getNameOfJimpleUnsafe(File clzPath) {
+    try (FileInputStream inputStream = new FileInputStream(clzPath)) {
+      return getNameOfJimpleUnsafe(inputStream);
+    } catch (IOException ioException) {
+      logger.debug("IOException occurred: " + ioException.getMessage());
+    }
+    return null;
+  }
+
+  public String getNameOfJimpleUnsafe(ZipFile zipFile, ZipEntry entry) {
+    try (InputStream inputStream = zipFile.getInputStream(entry)) {
+      return getNameOfJimpleUnsafe(inputStream);
+    } catch (IOException ioException) {
+      logger.debug("IOException occurred: " + ioException.getMessage());
+    }
+    return null;
+  }
+
+  public String getNameOfJavaUnsafe(File clzPath) {
+    return null;
+  }
+
   public List<String> getClassesUnder(String aPath) {
     return getClassesUnder(aPath, "");
   }
@@ -384,8 +499,14 @@ public class SourceLocator {
         for (Enumeration<? extends ZipEntry> entries = archive.get().entries(); entries.hasMoreElements();) {
           ZipEntry entry = entries.nextElement();
           String entryName = entry.getName();
-          if (entryName.endsWith(".class") || entryName.endsWith(".jimple")) {
-            classes.add(prefix + entryName.substring(0, entryName.lastIndexOf('.')).replace('/', '.'));
+          String className = null;
+          if (entryName.endsWith(".class")) {
+            className = getNameOfClassUnsafe(archive.get(), entry);
+          } else if (entryName.endsWith(".jimple")) {
+            className = getNameOfJimpleUnsafe(archive.get(), entry);
+          }
+          if (className != null) {
+            classes.add(className);
           }
         }
       } catch (Throwable e) {
@@ -466,12 +587,13 @@ public class SourceLocator {
           classes.addAll(getClassesUnder(aPath + File.separatorChar + element.getName(), prefix + element.getName() + '.'));
         } else {
           String fileName = element.getName();
+          String className = null;
           if (fileName.endsWith(".class")) {
-            classes.add(prefix + fileName.substring(0, fileName.lastIndexOf(".class")));
+            className = getNameOfClassUnsafe(element);
           } else if (fileName.endsWith(".jimple")) {
-            classes.add(prefix + fileName.substring(0, fileName.lastIndexOf(".jimple")));
+            className = getNameOfJimpleUnsafe(element);
           } else if (fileName.endsWith(".java")) {
-            classes.add(prefix + fileName.substring(0, fileName.lastIndexOf(".java")));
+            className = getNameOfJavaUnsafe(element);
           } else if (fileName.endsWith(".dex")) {
             try {
               for (DexFileProvider.DexContainer<? extends DexFile> dex : DexFileProvider.v().getDexFromSource(element)) {
@@ -481,6 +603,9 @@ public class SourceLocator {
               /* Ignore unreadable files */
               logger.debug(e.getMessage());
             }
+          }
+          if (className != null) {
+            classes.add(className);
           }
         }
       }
@@ -773,7 +898,7 @@ public class SourceLocator {
     jar, zip, apk, dex, directory, jrt, unknown, exe, dll
   }
 
-  static class SharedZipFileCacheWrapper {
+  static public class SharedZipFileCacheWrapper {
 
     // NOTE: the SharedResourceCache here is intentionally wrapped within
     // SharedZipFileCacheWrapper which has only one public method since the

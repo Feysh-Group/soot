@@ -39,6 +39,7 @@ public class NewInstanceNode extends Node {
   NewInstanceNode(PAG pag, Value value, Type type) {
     super(pag, type);
     this.value = value;
+    pag.getNewInstanceNodeNumberer().add(this);
   }
 
   public Value getValue() {

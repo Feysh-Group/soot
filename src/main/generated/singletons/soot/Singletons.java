@@ -254,6 +254,15 @@ public class Singletons {
        	}
         return instance_soot_SourceLocator;
     }
+
+    public void set_SourceLocator(soot.SourceLocator soot_SourceLocator) {
+        release_soot_SourceLocator();
+        synchronized (this) {
+            if (instance_soot_SourceLocator == null)
+                instance_soot_SourceLocator = soot_SourceLocator;
+        }
+    }
+
     protected void release_soot_SourceLocator() {
     	instance_soot_SourceLocator = null;
     }

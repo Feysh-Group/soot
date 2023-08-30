@@ -429,7 +429,7 @@ public class SharedHybridSet extends PointsToSetInternal {
     // SharedHybridSet, but I don't know how at the moment.
     if (bitVector != null) {
       for (BitSetIterator it = bitVector.iterator(); it.hasNext();) {
-        v.visit((Node) pag.getAllocNodeNumberer().get(it.next()));
+        v.visit((Node) pag.nodeNumberer().get(it.next()));
       }
     }
     // Iterate through the overflow list
@@ -483,7 +483,7 @@ public class SharedHybridSet extends PointsToSetInternal {
         // Get the next node in the bitset by looking it up in the
         // pointer assignment graph.
         // Ripped from BitPointsToSet.
-        Node n = (Node) (pag.getAllocNodeNumberer().get(it.next()));
+        Node n = (Node) (pag.nodeNumberer().get(it.next()));
         add(n);
       }
 

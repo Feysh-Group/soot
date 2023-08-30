@@ -115,6 +115,7 @@ public class SparkTransformer extends SceneTransformer {
     }
 
     if (opts.verbose()) {
+      logger.debug("NewInstanceNode: " + pag.getNewInstanceNodeNumberer().size());
       logger.debug("VarNodes: " + pag.getVarNodeNumberer().size());
       logger.debug("FieldRefNodes: " + pag.getFieldRefNodeNumberer().size());
       logger.debug("AllocNodes: " + pag.getAllocNodeNumberer().size());
